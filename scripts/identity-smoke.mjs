@@ -35,9 +35,10 @@ try {
   for(const mode of ['unsigned','tampered','audience','multiple-audience','issuer','recipient','destination','request','expired','sha1']) {
     const c=await context(),result=await login(c,'saml','admin@example.test',mode);assert.equal(result.status,401,'SAML '+mode);assert.equal((await json(c,'/api/me')).user,null);await c.close();
   }
-  for(const mode of ['nonce','audience','issuer','expired','unverified']) {
+  for(const mode of ['nonce','audience','issuer','expired','unverified','azp','multi-audience','multi-audience-bad-azp']) {
     const c=await context(),result=await login(c,'oidc','admin@example.test',mode);assert.equal(result.status,mode==='unverified'?403:401,'OIDC '+mode);await c.close();
   }
+  const multiAudience=await context();assert.equal((await login(multiAudience,'oidc','admin@example.test','multi-audience-valid')).status,303);await multiAudience.close();
   // OIDC callback needs the initiating browser, even with a genuine code/state.
   const attempt=await context(),page=await attempt.newPage();await page.goto(app.base+'/auth/login');
   const authUrl=new URL(page.url());const missingState=await anonymous.request.get(app.base+'/auth/callback?code=fake&state='+authUrl.searchParams.get('state'));assert.equal(missingState.status(),401);await page.close();
@@ -92,6 +93,17 @@ try {
   await json(owner,'/api/settings/artifacts','PUT',{canvas_enabled:true,external_invites:false});
   // Cross-browser/cross-provider sessions reopen persisted board membership.
   const returning=await context();await login(returning,'oidc','external@partner.test');assert.equal((await json(returning,`/api/canvases/${board.id}`)).title,'External collaborator edit');
+  // A changed SSO email must not inherit an older MCP factory's admin identity.
+  const privateBoard=await json(commenter,'/api/canvases','POST',{title:'Private account board',nodes:[],edges:[]},201);
+  async function mcpRead(c,token,canvas) {
+    const headers={Authorization:'Bearer '+token,Accept:'application/json, text/event-stream','MCP-Protocol-Version':'2025-06-18'};
+    const init=await c.request.post(app.base+'/mcp',{data:{jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-06-18',capabilities:{},clientInfo:{name:'principal-regression',version:'1'}}},headers});assert(init.ok());headers['Mcp-Session-Id']=init.headers()['mcp-session-id'];
+    await c.request.post(app.base+'/mcp',{data:{jsonrpc:'2.0',method:'notifications/initialized'},headers});
+    const result=await c.request.post(app.base+'/mcp',{data:{jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'read_canvas',arguments:{canvas_id:canvas}}},headers});assert(result.ok());const text=await result.text();return JSON.parse(text.startsWith('event:')||text.startsWith('data:')?text.split('\n').find(l=>l.startsWith('data: ')).slice(6):text);
+  }
+  const adminToken=await json(owner,'/api/tokens','POST');assert((await mcpRead(anonymous,adminToken.token,privateBoard.id)).result);
+  const renamed=await context();await login(renamed,'oidc','former-admin@example.test','email-change');const renamedUser=(await json(renamed,'/api/me')).user;assert.equal(renamedUser.id,identity.id);assert.equal(renamedUser.admin,false);
+  await json(renamed,`/api/canvases/${privateBoard.id}`,'GET',undefined,403);const renamedToken=await json(renamed,'/api/tokens','POST');const restricted=await mcpRead(anonymous,renamedToken.token,privateBoard.id);assert(restricted.error||restricted.result?.isError,'MCP must use the new non-admin principal');
   assert(app.counts().pkceExchanges>=8&&app.counts().requestSignatures>=13);
   console.log('PASS: signed SAML, replay/correlation/signature/audience/recipient/time checks, OIDC PKCE/nonce/claims, identity linking, SMTP invitations, roles, live comment pins, keyboard traversal, cross-size following, revocation, PATs, and organization policy');
 } catch(error) {console.error(app.logs());throw error;}

@@ -45,7 +45,7 @@ export async function fixture({oidc=true}={}) {
         assert.equal(entry.parameters.get('code_challenge_method'),'S256');
         assert.equal(createHash('sha256').update(form.get('code_verifier')).digest('base64url'),entry.parameters.get('code_challenge'));pkceExchanges++;
         const {email,mode,parameters}=entry,now=Math.floor(Date.now()/1000);
-        const claims={iss:mode==='issuer'?'https://wrong.test':issuer,sub:email,aud:mode==='audience'?'wrong-client':'pinboard-fixture',iat:now,exp:now+(mode==='expired'?-600:300),nonce:mode==='nonce'?'wrong':parameters.get('nonce'),email,email_verified:mode!=='unverified',name:email.split('@')[0]};
+        const claims={iss:mode==='issuer'?'https://wrong.test':issuer,sub:mode==='email-change'?'admin@example.test':email,aud:mode.startsWith('multi-audience')?['pinboard-fixture','other-client']:mode==='audience'?'wrong-client':'pinboard-fixture',azp:mode==='azp'||mode==='multi-audience-bad-azp'?'wrong-client':mode==='multi-audience-valid'?'pinboard-fixture':undefined,iat:now,exp:now+(mode==='expired'?-600:300),nonce:mode==='nonce'?'wrong':parameters.get('nonce'),email,email_verified:mode!=='unverified',name:email.split('@')[0]};
         const content=b64({alg:'RS256',kid:'fixture',typ:'JWT'})+'.'+b64(claims);
         return reply(response,{id_token:content+'.'+sign('RSA-SHA256',Buffer.from(content),key).toString('base64url'),access_token:'fixture-only',token_type:'Bearer'});
       }

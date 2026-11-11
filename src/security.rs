@@ -482,7 +482,20 @@ impl Security {
         )
         .map_err(|_| StoreError::Unauthorized)?
         .claims;
-        if claims.nonce.as_deref() != Some(&attempt.nonce) || claims.sub.is_empty() {
+        let authorized_party = match &claims.aud {
+            Audience::Single(audience) => audience == &o.client_id,
+            Audience::Multiple(audiences) => {
+                audiences.contains(&o.client_id)
+                    && (audiences.len() == 1 || claims.azp.as_deref() == Some(&o.client_id))
+            }
+        } && claims
+            .azp
+            .as_deref()
+            .is_none_or(|party| party == o.client_id);
+        if !authorized_party
+            || claims.nonce.as_deref() != Some(&attempt.nonce)
+            || claims.sub.is_empty()
+        {
             return Err(StoreError::Unauthorized);
         }
         let (email, verified, name) = if claims.email.is_some() {
@@ -577,10 +590,18 @@ fn bearer_or_cookie(headers: &HeaderMap) -> Option<String> {
 #[derive(Deserialize)]
 struct Claims {
     sub: String,
+    aud: Audience,
+    azp: Option<String>,
     nonce: Option<String>,
     email: Option<String>,
     email_verified: Option<bool>,
     name: Option<String>,
+}
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum Audience {
+    Single(String),
+    Multiple(Vec<String>),
 }
 #[derive(Deserialize)]
 struct UserClaims {

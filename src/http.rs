@@ -411,9 +411,15 @@ async fn mcp_endpoint(
     Extension(actor): Extension<Actor>,
     req: Request,
 ) -> Response {
+    // A stable account can return through SSO with a changed email/role/name.
+    // Do not reuse a transport factory that captured an older principal.
+    let principal = match serde_json::to_string(&actor.user) {
+        Ok(value) => crate::security::digest(&value),
+        Err(error) => return StoreError::from(error).into_response(),
+    };
     let service = {
         let mut services = s.mcp.lock().await;
-        if let Some(service) = services.get(&actor.user.id) {
+        if let Some(service) = services.get(&principal) {
             service.clone()
         } else {
             if services.len() >= 10000 {
@@ -433,7 +439,7 @@ async fn mcp_endpoint(
                 Arc::new(LocalSessionManager::default()),
                 Default::default(),
             );
-            services.insert(actor.user.id, service.clone());
+            services.insert(principal, service.clone());
             service
         }
     };

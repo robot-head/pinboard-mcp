@@ -14,7 +14,7 @@ Use a single server process per embedded Turso database. Pending SSO requests an
 
 Set `PINBOARD_OIDC_ISSUER`, `PINBOARD_OIDC_CLIENT_ID`, and, if required by your provider, `PINBOARD_OIDC_CLIENT_SECRET`. Optionally set `PINBOARD_OIDC_LABEL`.
 
-Register `${PINBOARD_PUBLIC_URL}/auth/callback` as an exact redirect URI. Discovery must return the configured issuer and HTTPS authorization/token/JWKS endpoints (loopback HTTP is permitted for development). The integration uses authorization code flow, PKCE S256, nonce, and a browser-bound one-use state. It validates asymmetric token signatures, issuer, audience, expiry, and nonce. A verified email is required in the ID token or matching-subject UserInfo response. Providers that do not assert `email_verified: true` need an appropriate claim mapping.
+Register `${PINBOARD_PUBLIC_URL}/auth/callback` as an exact redirect URI. Discovery must return the configured issuer and HTTPS authorization/token/JWKS endpoints (loopback HTTP is permitted for development). The integration uses authorization code flow, PKCE S256, nonce, and a browser-bound one-use state. It validates asymmetric token signatures, issuer, audience, authorized party (including multiple-audience tokens), expiry, and nonce. A verified email is required in the ID token or matching-subject UserInfo response. Providers that do not assert `email_verified: true` need an appropriate claim mapping.
 
 ## SAML 2.0
 
