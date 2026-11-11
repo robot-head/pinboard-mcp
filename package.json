@@ -1,0 +1,7 @@
+{
+  "name": "pinboard-browser-tests",
+  "private": true,
+  "type": "module",
+  "scripts": { "test:e2e": "node scripts/browser-smoke.mjs" },
+  "devDependencies": { "playwright": "1.62.1" }
+}

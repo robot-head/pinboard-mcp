@@ -1,1 +1,11 @@
 /target
+/crates/web/dist
+/data
+/node_modules
+/test-results
+/artifacts
+/.env
+/.env.*
+!/.env.example
+*.pem
+*.key
