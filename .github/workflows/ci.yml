@@ -1,0 +1,50 @@
+name: Validate
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: SAML and XML signature dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config clang libclang-dev libssl-dev libxml2-dev libxslt1-dev libxmlsec1-dev xmlsec1
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: cargo fmt --all --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test --locked
+      - run: cargo check --locked -p pinboard-web --target wasm32-unknown-unknown
+      - run: cargo clippy --locked -p pinboard-web --target wasm32-unknown-unknown -- -D warnings
+      - run: cargo install trunk --version 0.22.1 --locked
+      - run: trunk build --release
+        working-directory: crates/web
+      - run: cargo build --locked
+      - run: python3 scripts/mcp-smoke.py
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: OIDC, SAML, SMTP, and authorization fixtures
+        run: node scripts/identity-smoke.mjs
+      - name: Browser and HTTP MCP smoke tests
+        shell: bash
+        run: |
+          target/debug/pinboard-mcp --serve --db /tmp/pinboard-ci.db > /tmp/pinboard-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4127/api/health; then break; fi
+            sleep 1
+          done
+          python3 scripts/http-mcp-smoke.py
+          npm run test:e2e
+          node scripts/editor-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-artifacts
+          path: artifacts/

@@ -2,5 +2,44 @@
 name = "pinboard-mcp"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.95"
+description = "A spatial canvas for humans and MCP assistants"
+license = "MIT"
+
+[workspace]
+members = ["crates/core", "crates/web"]
+default-members = [".", "crates/core"]
+resolver = "2"
 
 [dependencies]
+pinboard-core = { path = "crates/core" }
+anyhow = "1"
+axum = { version = "0.8", features = ["ws"] }
+clap = { version = "4", features = ["derive", "env"] }
+futures-util = "0.3"
+rmcp = { version = "0.8", features = ["server", "transport-io", "transport-streamable-http-server"] }
+toasty = { version = "0.11", default-features = false, features = ["turso-serverless", "migration"] }
+toasty-driver-turso = { version = "0.11", features = ["serverless"] }
+toasty-core = "0.11"
+schemars = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tower-http = { version = "0.6", features = ["fs", "limit", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls-native-roots"] }
+jsonwebtoken = "9"
+sha2 = "0.10"
+base64 = "0.22"
+url = "2"
+chrono = "0.4"
+lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls", "hostname", "pool"] }
+samael = "0.0.22"
+openssl = "0.10"
+quick-xml = "0.41"
+
+[dev-dependencies]
+tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
