@@ -7,7 +7,7 @@ A visual planning canvas for humans, Claude, and Codex. Rust and Leptos provide 
 Requirements: Rust 1.95+, Trunk 0.22.1, the WASM target, and OpenSSL/libxml2/xmlsec development libraries. On Debian/Ubuntu:
 
 ```sh
-sudo apt-get install pkg-config clang libclang-dev libssl-dev libxml2-dev libxslt1-dev libxmlsec1-dev libxmlsec1-openssl xmlsec1
+sudo apt-get install pkg-config clang libclang-dev libssl-dev libxml2-dev libxslt1-dev libxmlsec1-dev xmlsec1
 rustup target add wasm32-unknown-unknown
 cargo install trunk --version 0.22.1 --locked
 (cd crates/web && trunk build --release)
