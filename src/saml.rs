@@ -200,6 +200,9 @@ impl Saml {
             let assertion = sp
                 .parse_xml_response(&xml, Some(&[request_id.as_str()]))
                 .map_err(|_| StoreError::Unauthorized)?;
+            if assertion.issue_instant > chrono::Utc::now() + sp.max_clock_skew {
+                return Err(StoreError::Unauthorized);
+            }
             let conditions = assertion
                 .conditions
                 .as_ref()

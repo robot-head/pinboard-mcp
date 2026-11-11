@@ -32,7 +32,7 @@ try {
   const saml=await context();const signed=await login(saml,'saml');assert.equal(signed.status,303);
   assert.equal((await json(saml,'/api/me')).user.id,identity.id,'SAML and OIDC link verified email to the same account');
   const replay=await saml.request.post(app.base+'/auth/saml/acs',{form:signed.fields,headers:{Cookie:'pinboard_saml_state='+signed.correlation.value}});assert.equal(replay.status(),401,'one-use SAML request');await signed.page.close();
-  for(const mode of ['unsigned','tampered','audience','multiple-audience','issuer','recipient','destination','request','expired','sha1']) {
+  for(const mode of ['unsigned','tampered','audience','multiple-audience','issuer','recipient','destination','request','expired','future','not-yet-valid','sha1']) {
     const c=await context(),result=await login(c,'saml','admin@example.test',mode);assert.equal(result.status,401,'SAML '+mode);assert.equal((await json(c,'/api/me')).user,null);await c.close();
   }
   for(const mode of ['nonce','audience','issuer','expired','unverified','azp','multi-audience','multi-audience-bad-azp']) {
